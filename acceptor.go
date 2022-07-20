@@ -48,7 +48,7 @@ func (eng *engine) accept(fd int, _ netpoll.IOEvent) error {
 		logging.Error(err)
 	}
 
-	el := eng.lb.next(remoteAddr)
+	el := eng.lb.next(remoteAddr) // 从负载均衡器找一个
 	c := newTCPConn(nfd, el, sa, el.ln.addr, remoteAddr)
 
 	err = el.poller.UrgentTrigger(el.register, c)

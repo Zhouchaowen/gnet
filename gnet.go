@@ -240,6 +240,7 @@ type (
 	EventHandler interface {
 		// OnBoot fires when the engine is ready for accepting connections.
 		// The parameter engine has information and various utilities.
+		// OnBoot 在引擎准备好接受连接时触发。Run()中调用
 		OnBoot(eng Engine) (action Action)
 
 		// OnShutdown fires when the engine is being shut down, it is called right after
@@ -332,6 +333,7 @@ func Run(eventHandler EventHandler, protoAddr string, opts ...Option) (err error
 
 	logging.Debugf("default logging level is %s", logging.LogLevel())
 
+	// 配置日志信息
 	var (
 		logger logging.Logger
 		flush  func() error
@@ -362,7 +364,7 @@ func Run(eventHandler EventHandler, protoAddr string, opts ...Option) (err error
 	}
 
 	rbc := options.ReadBufferCap
-	switch {
+	switch { // 设置最大读取字节数
 	case rbc <= 0:
 		options.ReadBufferCap = MaxStreamBufferCap
 	case rbc <= ring.DefaultBufferSize:
@@ -371,7 +373,7 @@ func Run(eventHandler EventHandler, protoAddr string, opts ...Option) (err error
 		options.ReadBufferCap = toolkit.CeilToPowerOfTwo(rbc)
 	}
 	wbc := options.WriteBufferCap
-	switch {
+	switch { // 设置最大写字节数
 	case wbc <= 0:
 		options.WriteBufferCap = MaxStreamBufferCap
 	case wbc <= ring.DefaultBufferSize:

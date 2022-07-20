@@ -40,13 +40,16 @@ type Poller struct {
 }
 
 // OpenPoller instantiates a poller.
+// OpenPoller 实例化一个轮询器
 func OpenPoller() (poller *Poller, err error) {
 	poller = new(Poller)
+	// 创建kqueue，返回描述符fd
 	if poller.fd, err = unix.Kqueue(); err != nil {
 		poller = nil
 		err = os.NewSyscallError("kqueue", err)
 		return
 	}
+	// 注册一个事件到 kqueue中
 	if _, err = unix.Kevent(poller.fd, []unix.Kevent_t{{
 		Ident:  0,
 		Filter: unix.EVFILT_USER,
@@ -108,7 +111,7 @@ func (p *Poller) Trigger(fn queue.TaskFunc, arg interface{}) (err error) {
 
 // Polling blocks the current goroutine, waiting for network-events.
 func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
-	el := newEventList(InitPollEventsCap)
+	el := newEventList(InitPollEventsCap) // 存储被触发事件
 
 	var (
 		ts       unix.Timespec
@@ -116,6 +119,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 		doChores bool
 	)
 	for {
+		// 阻塞获取被触发事件
 		n, err := unix.Kevent(p.fd, nil, el.events, tsp)
 		if n == 0 || (n < 0 && err == unix.EINTR) {
 			tsp = nil
@@ -130,11 +134,12 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 		var evFilter int16
 		for i := 0; i < n; i++ {
 			ev := &el.events[i]
-			if fd := int(ev.Ident); fd != 0 {
+			if fd := int(ev.Ident); fd != 0 { // 获取 fd 描述符
 				evFilter = el.events[i].Filter
 				if (ev.Flags&unix.EV_EOF != 0) || (ev.Flags&unix.EV_ERROR != 0) {
 					evFilter = EVFilterSock
 				}
+				// 调用回调
 				switch err = callback(fd, evFilter); err {
 				case nil:
 				case errors.ErrAcceptSocket, errors.ErrEngineShutdown:
@@ -147,10 +152,10 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 			}
 		}
 
-		if doChores {
+		if doChores { // TODO
 			doChores = false
 			task := p.urgentAsyncTaskQueue.Dequeue()
-			for ; task != nil; task = p.urgentAsyncTaskQueue.Dequeue() {
+			for ; task != nil; task = p.urgentAsyncTaskQueue.Dequeue() { // 运行紧急任务
 				switch err = task.Run(task.Arg); err {
 				case nil:
 				case errors.ErrEngineShutdown:
@@ -161,7 +166,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 				queue.PutTask(task)
 			}
 			for i := 0; i < MaxAsyncTasksAtOneTime; i++ {
-				if task = p.asyncTaskQueue.Dequeue(); task == nil {
+				if task = p.asyncTaskQueue.Dequeue(); task == nil { // 运行任务
 					break
 				}
 				switch err = task.Run(task.Arg); err {
@@ -173,6 +178,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 				}
 				queue.PutTask(task)
 			}
+			// TODO
 			atomic.StoreInt32(&p.wakeupCall, 0)
 			if (!p.asyncTaskQueue.IsEmpty() || !p.urgentAsyncTaskQueue.IsEmpty()) && atomic.CompareAndSwapInt32(&p.wakeupCall, 0, 1) {
 				switch _, err = unix.Kevent(p.fd, note, nil, nil); err {

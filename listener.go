@@ -49,6 +49,7 @@ func (ln *listener) dup() (int, string, error) {
 	return netpoll.Dup(ln.fd)
 }
 
+// 选择不同的协议，进行初始化socket
 func (ln *listener) normalize() (err error) {
 	switch ln.network {
 	case "tcp", "tcp4", "tcp6":

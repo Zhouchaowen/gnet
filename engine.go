@@ -84,6 +84,7 @@ func (eng *engine) startSubReactors() {
 	eng.lb.iterate(func(i int, el *eventloop) bool {
 		eng.wg.Add(1)
 		go func() {
+			// 开启负载均衡器对应数量的 subReactor
 			el.activateSubReactor(eng.opts.LockOSThread)
 			eng.wg.Done()
 		}()
@@ -136,15 +137,17 @@ func (eng *engine) activateEventLoops(numEventLoop int) (err error) {
 
 func (eng *engine) activateReactors(numEventLoop int) error {
 	for i := 0; i < numEventLoop; i++ {
+		// 实例化一个轮询器
 		if p, err := netpoll.OpenPoller(); err == nil {
 			el := new(eventloop)
+			// 这儿listener是同一个，没啥关系，因为其他的actor不会监听客户端连接
 			el.ln = eng.ln
 			el.engine = eng
 			el.poller = p
 			el.buffer = make([]byte, eng.opts.ReadBufferCap)
 			el.connections = make(map[int]*conn)
 			el.eventHandler = eng.eventHandler
-			eng.lb.register(el)
+			eng.lb.register(el) // 注册到负载均衡器
 		} else {
 			return err
 		}
@@ -153,6 +156,7 @@ func (eng *engine) activateReactors(numEventLoop int) error {
 	// Start sub reactors in background.
 	eng.startSubReactors()
 
+	// 创建 MainReactor
 	if p, err := netpoll.OpenPoller(); err == nil {
 		el := new(eventloop)
 		el.ln = eng.ln
@@ -160,6 +164,7 @@ func (eng *engine) activateReactors(numEventLoop int) error {
 		el.engine = eng
 		el.poller = p
 		el.eventHandler = eng.eventHandler
+		// 注册读事件，接收客户端连接
 		if err = el.poller.AddRead(eng.ln.packPollAttachment(eng.accept)); err != nil {
 			return err
 		}
@@ -184,6 +189,7 @@ func (eng *engine) activateReactors(numEventLoop int) error {
 }
 
 func (eng *engine) start(numEventLoop int) error {
+	// udp或者端口重用的的话直接activateEventLoops
 	if eng.opts.ReusePort || eng.ln.network == "udp" {
 		return eng.activateEventLoops(numEventLoop)
 	}
@@ -236,6 +242,7 @@ func (eng *engine) stop(s Engine) {
 
 func serve(eventHandler EventHandler, listener *listener, options *Options, protoAddr string) error {
 	// Figure out the proper number of event-loops/goroutines to run.
+	// 运行的事件循环 goroutine 的数量
 	numEventLoop := 1
 	if options.Multicore {
 		numEventLoop = runtime.NumCPU()
@@ -249,6 +256,7 @@ func serve(eventHandler EventHandler, listener *listener, options *Options, prot
 	eng.eventHandler = eventHandler
 	eng.ln = listener
 
+	// 选择负责均衡策略
 	switch options.LB {
 	case RoundRobin:
 		eng.lb = new(roundRobinLoadBalancer)
