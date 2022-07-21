@@ -78,14 +78,16 @@ var note = []unix.Kevent_t{{
 
 // UrgentTrigger puts task into urgentAsyncTaskQueue and wakes up the poller which is waiting for network-events,
 // then the poller will get tasks from urgentAsyncTaskQueue and run them.
-//
+// UrgentTrigger 将任务放入urgentAsyncTaskQueue 并唤醒等待网络事件的轮询器，
+// 然后轮询器将从urgentAsyncTaskQueue 中获取任务并运行它们。
 // Note that urgentAsyncTaskQueue is a queue with high-priority and its size is expected to be small,
 // so only those urgent tasks should be put into this queue.
 func (p *Poller) UrgentTrigger(fn queue.TaskFunc, arg interface{}) (err error) {
 	task := queue.GetTask()
 	task.Run, task.Arg = fn, arg
 	p.urgentAsyncTaskQueue.Enqueue(task)
-	if atomic.CompareAndSwapInt32(&p.wakeupCall, 0, 1) {
+	if atomic.CompareAndSwapInt32(&p.wakeupCall, 0, 1) { // TODO
+		// 添加事件到sub的eventLoop监控中
 		if _, err = unix.Kevent(p.fd, note, nil, nil); err == unix.EAGAIN {
 			err = nil
 		}
@@ -110,6 +112,7 @@ func (p *Poller) Trigger(fn queue.TaskFunc, arg interface{}) (err error) {
 }
 
 // Polling blocks the current goroutine, waiting for network-events.
+// 轮询阻塞当前的 goroutine，等待网络事件。
 func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 	el := newEventList(InitPollEventsCap) // 存储被触发事件
 
@@ -134,7 +137,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 		var evFilter int16
 		for i := 0; i < n; i++ {
 			ev := &el.events[i]
-			if fd := int(ev.Ident); fd != 0 { // 获取 fd 描述符
+			if fd := int(ev.Ident); fd != 0 { // 获取 fd 描述符 != 0。
 				evFilter = el.events[i].Filter
 				if (ev.Flags&unix.EV_EOF != 0) || (ev.Flags&unix.EV_ERROR != 0) {
 					evFilter = EVFilterSock
@@ -190,9 +193,9 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 		}
 
 		if n == el.size {
-			el.expand()
+			el.expand() // 扩展
 		} else if n < el.size>>1 {
-			el.shrink()
+			el.shrink() // 收缩
 		}
 	}
 }

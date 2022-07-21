@@ -85,6 +85,7 @@ func (el *eventloop) register(itf interface{}) error {
 		el.udpSockets[c.fd] = c
 		return nil
 	}
+	// TODO
 	if err := el.poller.AddRead(c.pollAttachment); err != nil {
 		_ = unix.Close(c.fd)
 		c.releaseTCP()
@@ -127,7 +128,7 @@ func (el *eventloop) read(c *conn) error {
 	}
 
 	c.buffer = el.buffer[:n]
-	action := el.eventHandler.OnTraffic(c)
+	action := el.eventHandler.OnTraffic(c) // 回调 eventHandler
 	switch action {
 	case None:
 	case Close:

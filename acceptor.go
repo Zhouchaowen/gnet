@@ -43,15 +43,15 @@ func (eng *engine) accept(fd int, _ netpoll.IOEvent) error {
 	}
 
 	remoteAddr := socket.SockaddrToTCPOrUnixAddr(sa)
-	if eng.opts.TCPKeepAlive > 0 && eng.ln.network == "tcp" {
+	if eng.opts.TCPKeepAlive > 0 && eng.ln.network == "tcp" { // 设置keepalive
 		err = socket.SetKeepAlivePeriod(nfd, int(eng.opts.TCPKeepAlive.Seconds()))
 		logging.Error(err)
 	}
 
-	el := eng.lb.next(remoteAddr) // 从负载均衡器找一个
+	el := eng.lb.next(remoteAddr) // 从负载均衡器找一个eventLoop
 	c := newTCPConn(nfd, el, sa, el.ln.addr, remoteAddr)
 
-	err = el.poller.UrgentTrigger(el.register, c)
+	err = el.poller.UrgentTrigger(el.register, c) // 放入 urgentAsyncTaskQueue
 	if err != nil {
 		eng.opts.Logger.Errorf("UrgentTrigger() failed due to error: %v", err)
 		_ = unix.Close(nfd)

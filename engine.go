@@ -154,7 +154,7 @@ func (eng *engine) activateReactors(numEventLoop int) error {
 	}
 
 	// Start sub reactors in background.
-	eng.startSubReactors()
+	eng.startSubReactors() // 启动循环阻塞获取事件
 
 	// 创建 MainReactor
 	if p, err := netpoll.OpenPoller(); err == nil {
@@ -164,7 +164,7 @@ func (eng *engine) activateReactors(numEventLoop int) error {
 		el.engine = eng
 		el.poller = p
 		el.eventHandler = eng.eventHandler
-		// 注册读事件，接收客户端连接
+		// 注册读事件，接收客户端连接。TODO 应该是唯一READ入口
 		if err = el.poller.AddRead(eng.ln.packPollAttachment(eng.accept)); err != nil {
 			return err
 		}
