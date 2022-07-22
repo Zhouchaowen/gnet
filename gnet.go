@@ -384,12 +384,12 @@ func Run(eventHandler EventHandler, protoAddr string, opts ...Option) (err error
 
 	network, addr := parseProtoAddr(protoAddr)
 
-	var ln *listener
+	var ln *listener // 创建唯一入口监听器 listener
 	if ln, err = initListener(network, addr, options); err != nil {
 		return
 	}
 	defer ln.close()
-
+	//	启动服务
 	return serve(eventHandler, ln, options, protoAddr)
 }
 

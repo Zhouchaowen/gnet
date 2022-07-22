@@ -48,10 +48,11 @@ func (eng *engine) accept(fd int, _ netpoll.IOEvent) error {
 		logging.Error(err)
 	}
 
-	el := eng.lb.next(remoteAddr) // 从负载均衡器找一个eventLoop
-	c := newTCPConn(nfd, el, sa, el.ln.addr, remoteAddr)
+	el := eng.lb.next(remoteAddr)                        // 从负载均衡器找一个eventLoop
+	c := newTCPConn(nfd, el, sa, el.ln.addr, remoteAddr) // 将新来的连接描述符nfd和负载均衡器 一起封装成一个conn
 
-	err = el.poller.UrgentTrigger(el.register, c) // 放入 urgentAsyncTaskQueue
+	// 将register()和封装好的conn在封装成task，放入urgentAsyncTaskQueue。立刻触发执行一次Polling将nfd描述符添加到el的kqueue
+	err = el.poller.UrgentTrigger(el.register, c)
 	if err != nil {
 		eng.opts.Logger.Errorf("UrgentTrigger() failed due to error: %v", err)
 		_ = unix.Close(nfd)

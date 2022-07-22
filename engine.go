@@ -113,6 +113,7 @@ func (eng *engine) activateEventLoops(numEventLoop int) (err error) {
 			el.buffer = make([]byte, eng.opts.ReadBufferCap)
 			el.connections = make(map[int]*conn)
 			el.eventHandler = eng.eventHandler
+			// 将listener的fd放入当前eventLoop的kqueue中
 			if err = el.poller.AddRead(el.ln.packPollAttachment(el.accept)); err != nil {
 				return
 			}
@@ -137,7 +138,7 @@ func (eng *engine) activateEventLoops(numEventLoop int) (err error) {
 
 func (eng *engine) activateReactors(numEventLoop int) error {
 	for i := 0; i < numEventLoop; i++ {
-		// 实例化一个轮询器
+		// 实例化一个轮询器，添加自定义监听事件
 		if p, err := netpoll.OpenPoller(); err == nil {
 			el := new(eventloop)
 			// 这儿listener是同一个，没啥关系，因为其他的actor不会监听客户端连接
@@ -165,6 +166,7 @@ func (eng *engine) activateReactors(numEventLoop int) error {
 		el.poller = p
 		el.eventHandler = eng.eventHandler
 		// 注册读事件，接收客户端连接。TODO 应该是唯一READ入口
+		// 将 listener 的fd放入当前eventLoop的kqueue中
 		if err = el.poller.AddRead(eng.ln.packPollAttachment(eng.accept)); err != nil {
 			return err
 		}

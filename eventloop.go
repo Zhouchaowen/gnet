@@ -85,13 +85,13 @@ func (el *eventloop) register(itf interface{}) error {
 		el.udpSockets[c.fd] = c
 		return nil
 	}
-	// TODO
+	// TODO 将新连接添加到当前eventLoop的kqueue中
 	if err := el.poller.AddRead(c.pollAttachment); err != nil {
 		_ = unix.Close(c.fd)
 		c.releaseTCP()
 		return err
 	}
-	el.connections[c.fd] = c
+	el.connections[c.fd] = c // 添加conn到map
 	return el.open(c)
 }
 

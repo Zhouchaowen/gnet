@@ -27,6 +27,8 @@ import (
 	"github.com/panjf2000/gnet/v2/pkg/errors"
 )
 
+// 主 Reactor 负责监听listener的描述符，并回调 accept()
+// 将accept到的新socket添加到 负载均衡器(子Reactor)
 func (el *eventloop) activateMainReactor(lockOSThread bool) {
 	if lockOSThread {
 		runtime.LockOSThread()
@@ -43,6 +45,7 @@ func (el *eventloop) activateMainReactor(lockOSThread bool) {
 	}
 }
 
+// 子 Reactor 负责监听socket的描述符，并调用相关的read,write,closeConn
 func (el *eventloop) activateSubReactor(lockOSThread bool) {
 	if lockOSThread {
 		runtime.LockOSThread()

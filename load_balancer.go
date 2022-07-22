@@ -36,6 +36,7 @@ const (
 	SourceAddrHash
 )
 
+// 负载均衡器
 type (
 	// loadBalancer is an interface which manipulates the event-loop set.
 	loadBalancer interface {

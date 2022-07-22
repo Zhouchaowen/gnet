@@ -53,7 +53,7 @@ func OpenPoller() (poller *Poller, err error) {
 	if _, err = unix.Kevent(poller.fd, []unix.Kevent_t{{
 		Ident:  0,
 		Filter: unix.EVFILT_USER,
-		Flags:  unix.EV_ADD | unix.EV_CLEAR,
+		Flags:  unix.EV_ADD | unix.EV_CLEAR, // 添加
 	}}, nil, nil); err != nil {
 		_ = poller.Close()
 		poller = nil
@@ -73,7 +73,7 @@ func (p *Poller) Close() error {
 var note = []unix.Kevent_t{{
 	Ident:  0,
 	Filter: unix.EVFILT_USER,
-	Fflags: unix.NOTE_TRIGGER,
+	Fflags: unix.NOTE_TRIGGER, // 激活
 }}
 
 // UrgentTrigger puts task into urgentAsyncTaskQueue and wakes up the poller which is waiting for network-events,
@@ -87,7 +87,7 @@ func (p *Poller) UrgentTrigger(fn queue.TaskFunc, arg interface{}) (err error) {
 	task.Run, task.Arg = fn, arg
 	p.urgentAsyncTaskQueue.Enqueue(task)
 	if atomic.CompareAndSwapInt32(&p.wakeupCall, 0, 1) { // TODO
-		// 添加事件到sub的eventLoop监控中
+		// TODO 触发自定义服务？
 		if _, err = unix.Kevent(p.fd, note, nil, nil); err == unix.EAGAIN {
 			err = nil
 		}
@@ -104,6 +104,7 @@ func (p *Poller) Trigger(fn queue.TaskFunc, arg interface{}) (err error) {
 	task.Run, task.Arg = fn, arg
 	p.asyncTaskQueue.Enqueue(task)
 	if atomic.CompareAndSwapInt32(&p.wakeupCall, 0, 1) {
+		// TODO 触发自定义服务？
 		if _, err = unix.Kevent(p.fd, note, nil, nil); err == unix.EAGAIN {
 			err = nil
 		}
@@ -137,7 +138,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 		var evFilter int16
 		for i := 0; i < n; i++ {
 			ev := &el.events[i]
-			if fd := int(ev.Ident); fd != 0 { // 获取 fd 描述符 != 0。
+			if fd := int(ev.Ident); fd != 0 { // 获取 fd 描述符 != 0 (不能是自定义事件)。
 				evFilter = el.events[i].Filter
 				if (ev.Flags&unix.EV_EOF != 0) || (ev.Flags&unix.EV_ERROR != 0) {
 					evFilter = EVFilterSock
