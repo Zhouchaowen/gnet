@@ -98,8 +98,9 @@ func (eng *engine) activateEventLoops(numEventLoop int) (err error) {
 	eng.ln = nil
 	var striker *eventloop
 	// Create loops locally and bind the listeners.
-	for i := 0; i < numEventLoop; i++ {
-		if i > 0 {
+	// 在本地创建循环并绑定侦听器。
+	for i := 0; i < numEventLoop; i++ { // 创建对应cpu数量的Poller
+		if i > 0 { // 新建 listener
 			if ln, err = initListener(network, address, eng.opts); err != nil {
 				return
 			}
@@ -113,11 +114,11 @@ func (eng *engine) activateEventLoops(numEventLoop int) (err error) {
 			el.buffer = make([]byte, eng.opts.ReadBufferCap)
 			el.connections = make(map[int]*conn)
 			el.eventHandler = eng.eventHandler
-			// 将listener的fd放入当前eventLoop的kqueue中
+			// 将listener的fd放入当前eventLoop的kqueue中 (eng.ln)
 			if err = el.poller.AddRead(el.ln.packPollAttachment(el.accept)); err != nil {
 				return
 			}
-			eng.lb.register(el)
+			eng.lb.register(el) // 添加到负载均衡器
 
 			// Start the ticker.
 			if el.idx == 0 && eng.opts.Ticker {
@@ -128,10 +129,10 @@ func (eng *engine) activateEventLoops(numEventLoop int) (err error) {
 		}
 	}
 
-	// Start event-loops in background.
+	// Start event-loops in background. 后台启动事件循环
 	eng.startEventLoops()
 
-	go striker.ticker(eng.tickerCtx)
+	go striker.ticker(eng.tickerCtx) // TODO
 
 	return
 }
@@ -273,7 +274,7 @@ func serve(eventHandler EventHandler, listener *listener, options *Options, prot
 		eng.tickerCtx, eng.cancelTicker = context.WithCancel(context.Background())
 	}
 
-	e := Engine{eng}
+	e := Engine{eng} // 封装Engine
 	switch eng.eventHandler.OnBoot(e) {
 	case None:
 	case Shutdown:

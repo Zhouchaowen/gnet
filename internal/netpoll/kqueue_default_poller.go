@@ -156,7 +156,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 			}
 		}
 
-		if doChores { // TODO
+		if doChores { // TODO 消费register task
 			doChores = false
 			task := p.urgentAsyncTaskQueue.Dequeue()
 			for ; task != nil; task = p.urgentAsyncTaskQueue.Dequeue() { // 运行紧急任务

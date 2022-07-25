@@ -92,6 +92,7 @@ func (el *eventloop) run(lockOSThread bool) {
 		el.engine.signalShutdown()
 	}()
 
+	// 事件循环，阻塞等待
 	err := el.poller.Polling(func(fd int, filter int16) (err error) {
 		if c, ack := el.connections[fd]; ack {
 			switch filter {
