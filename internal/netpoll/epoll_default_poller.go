@@ -134,7 +134,7 @@ func (p *Poller) Polling(callback func(fd int, ev uint32) error) error {
 
 		for i := 0; i < n; i++ {
 			ev := &el.events[i]
-			if fd := int(ev.Fd); fd != p.efd {
+			if fd := int(ev.Fd); fd != p.efd { // 不等于efd表示 新建连接
 				switch err = callback(fd, ev.Events); err {
 				case nil:
 				case errors.ErrAcceptSocket, errors.ErrEngineShutdown:

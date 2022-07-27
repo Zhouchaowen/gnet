@@ -138,7 +138,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 		var evFilter int16
 		for i := 0; i < n; i++ {
 			ev := &el.events[i]
-			if fd := int(ev.Ident); fd != 0 { // 获取 fd 描述符 != 0 (不能是自定义事件)。
+			if fd := int(ev.Ident); fd != 0 { // 获取 fd 描述符 != 0 (代表不是自定义事件)。
 				evFilter = el.events[i].Filter
 				if (ev.Flags&unix.EV_EOF != 0) || (ev.Flags&unix.EV_ERROR != 0) {
 					evFilter = EVFilterSock
@@ -152,7 +152,7 @@ func (p *Poller) Polling(callback func(fd int, filter int16) error) error {
 					logging.Warnf("error occurs in event-loop: %v", err)
 				}
 			} else { // poller is awakened to run tasks in queues.
-				doChores = true
+				doChores = true // fd == 0 代表自定义事件
 			}
 		}
 
